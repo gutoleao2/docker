@@ -4,6 +4,12 @@ This is about Docker (My notes for docker use are saved here. is my personal sou
 
 - [1 - Instalação do WSL 2](#1---Instalação-do-WSL-2)
 - [2 - Instalar o Docker com Docker Engine (Docker Nativo)](#2---instalar-o-docker-com-docker-engine-docker-nativo)
+- [3 - Começando com Docker (Hello World) !](#3---Começando-com-Docker-(Hello-World)-!)
+- [4 - Interagindo com Imagens](#4---Interagindo-com-Imagens)
+- [5 - Publicando portas](#5---Publicando-portas)
+- [6 - Removendo Contâiners](#6---Removendo-Contâiners)
+- [7 - Acessar e Alterar arquivos dentro de um contâiner](#7---Acessar-e-Alterar-arquivos-dentro-de-um-contâiner)
+- [8 - Trabalhando com bind mounts](#8---Trabalhando-com-bind-mounts)
 
 # 1 - Instalação do WSL 2
 
@@ -140,3 +146,117 @@ echo 1 | sudo tee /proc/sys/vm/drop_caches
 ```
 * Acrescente `export DOCKER_BUILDKIT=1` no final do arquivo .profile do seu usuário do Linux para ganhar mais performance ao realizar builds com Docker. Execute o comando `source ~/.profile` para carregar esta variável de ambiente no ambiente do seu WSL 2.
 * No Windows 11 é possível iniciar o Docker automaticamente, veja a seção: [Dica para Windows 11](#dica-para-windows-11)
+
+
+# 3 - Começando com Docker (Hello World) !
+
+Depois da devida instalção do WSL e Docker, é possível começar a utilizar essa ferramenta...
+
+Iniciar o serviço do docker
+
+```
+sudo service docker start
+```
+
+Iniciar o primeiro container
+
+```
+docker run hello-world
+```
+* docker run hello-world -> ```docker run <nome-da-imagem>```
+* Caso a imagem 'hello-world' não exista, a imagem será baixada. Caso exista, será executada.
+* (Opcional) É boa prática inserir um nome para o container e qual a versão da imagem que se deseja utilizar, portanto o comando completo seria:  
+```docker run --name primeiro-container hello-world:latest``` -> ```docker run --name  <nome-container> <nome-da-imagem>:<vesao>```
+
+Vizualizar os containers
+
+```
+docker ps     -> Os que estão rodando
+docker ps -a  -> Todos
+```
+
+Para Rodar ou Parar um cotâiner existente
+```
+docker start primeiro-container     -> docker start <nome-container ou id>
+docker stop primeiro-container      -> docker stop <nome-container ou id>
+docker stop -f primeiro-container   -> forçar a parada
+```
+
+# 4 - Interagindo com Imagens
+
+Para este exemplo, vamos executar a imagem do ubunto.
+
+```
+docker run -it ubuntu bash
+```
+* Sempre que desejarmos executar uma imagem no modo interativo, é preciso passar o '```-it```', em sequência dizer qual é a imagem '```ubuntu```' (nesse caso) e qual o comando que se deseja executar '```bash```'
+* O '```-it``` ou ```-i -t```' significa que o processo será acoplado ao terminal onde foi rodado e que o terminal estará liberado para digitação.
+
+
+Para remover um container ao finalizar o processo 
+
+```
+docker run -it --rm ubuntu bash
+```
+
+# 5 - Publicando portas
+
+É possível configurar o acesso a um contâiner através de portas.
+
+
+```
+docker run -p 8080:80 nginx       -> O terminal fica 'preso'
+docker run -d -p 8080:80 nginx    -> O terminal fica livre
+```
+
+* O comando acima significa dizer que quando eu acessar localhost na porta ```8080``` ele deverá direcionar para a porta ```80``` do contâiner.
+* Ao rodar o comando acima, percebe-se que o terminal fica 'preso' exibindo logs pois este processo não se encerra só. 
+* Para executar o contâiner sem desacoplando o terminal é preciso usar o '```-d```'.
+
+
+# 6 - Removendo Contâiners
+É possível remover contâiners não utilizados ou mesmo em uso.
+
+```
+docker rm 9b8898bf88ef                -> rm <id ou nome do contanier>
+docker rm 9b8898bf88ef b51d1648d59a   -> rm <ids ou nome do contanier>
+docker rm -f 9b8898bf88ef             -> -f força a parada e remoção do processo
+```
+
+# 7 - Acessar e Alterar arquivos dentro de um contâiner
+
+Iniciar um contâiner com imagem nginx
+```
+docker run -d --name nginx -p 8080:80 nginx
+```
+
+Executar Comandos dentro do container
+```
+docker exec nginx ls    -> vai rodar o comando 'ls' dentro do container 
+```
+* O comando acima, vai executar e sair. Ou seja, entrar no contâiner, listar os diretórios e sair.
+
+Acessar o bash do container
+```
+docker exec -it nginx bash   -> vai rodar o comando 'bash' dentro do container 
+```
+* O comando acima, vai executar o bash e permanecer até que o usuário queira finalizar.
+
+Acessar o diretório do arquivo 'welcome' do servidor nginx, intalar o 'vim' e  alterar o arquivo index.html
+```
+cd /usr/share/nginx/html
+apt-get update
+apt-get install vim
+vim index.html (digitar 'i' para conseguir editar, depois ESC :wq! para gravar e sair)
+```
+
+# 8 - Trabalhando com bind mounts
+Uma imagem é imutável. Mesmo que eu acesse e altere um arquivo dentro de um contâiner, quando ele for parado/reiniciado estes ajustes serão perdidos.
+
+O recurso ```bind mounts``` permite acoplar um diretório do seu computador local com um do seu contâiner. Fazendo isto os arquivos não são perdidos quando o contâiner morrer.
+
+```
+docker run -d --name nginx -p 8080:80 --mount type=bind,source="$(pwd)"/html,target=/usr/share/nginx/html nginx 
+```
+* ```$(pwd)``` é um atalho para capturar a pasta de trabalho atual.
+* ```--mount type=bind,source="$(pwd)"/html,target=/usr/share/nginx/html``` Significa dizer que quero vincular a pasta 'source' com a pasta 'target'.
