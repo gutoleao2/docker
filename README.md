@@ -10,6 +10,7 @@ This is about Docker (My notes for docker use are saved here. is my personal sou
 - [6 - Removendo Contâiners](#6---Removendo-Contâiners)
 - [7 - Acessar e Alterar arquivos dentro de um contâiner](#7---Acessar-e-Alterar-arquivos-dentro-de-um-contâiner)
 - [8 - Trabalhando com bind mounts](#8---Trabalhando-com-bind-mounts)
+- [# 9 - Trabalhando com Volumes](#-9---Trabalhando-com-Volumes)
 
 # 1 - Instalação do WSL 2
 
@@ -260,3 +261,47 @@ docker run -d --name nginx -p 8080:80 --mount type=bind,source="$(pwd)"/html,tar
 ```
 * ```$(pwd)``` é um atalho para capturar a pasta de trabalho atual.
 * ```--mount type=bind,source="$(pwd)"/html,target=/usr/share/nginx/html``` Significa dizer que quero vincular a pasta 'source' com a pasta 'target'.
+
+# 9 - Trabalhando com Volumes
+Ao usar o ```bind mounts``` nós estamos simplesmente ligando uma pasta com uma outra. Ao usar ```volumes``` nós criamos 'pequenos hds' que podem inclusive ser compartilhados com outros contâiners. Isto pode siginificar aumento de performance e também facilita o uso pois podemos esquecer algum mapeamento entre as pastas mas ao conectar o volume teremos acesso 
+
+Criar Volumes
+```
+docker volume create meu-volume   ->  <meu-volume> é o nome do volume a ser criado
+```
+
+Informações de Volumes
+```
+docker volume inspect meu-volume
+
+- resultado: 
+[
+    {
+        "CreatedAt": "2023-09-21T11:45:35-03:00",
+        "Driver": "local",
+        "Labels": null,
+        "Mountpoint": "/var/lib/docker/volumes/meu-volume/_data",
+        "Name": "meu-volume",
+        "Options": null,
+        "Scope": "local"
+    }
+]
+```
+
+Listar Volumes
+```
+docker volume ls
+```
+Conectar volume a um contâiner
+```
+docker run --name nginx -p 8080:80 -d --mount type=volume,source=meu-volume,target=/app nginx
+```
+Ou
+```
+docker run --name nginx -p 8080:80 -d -v meu-volume:/app nginx
+```
+
+Limpar dados de volume
+```
+docker volume prune
+```
