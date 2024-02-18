@@ -10,9 +10,9 @@ This is about Docker (My notes for docker use are saved here. is my personal sou
 - [6 - Removendo Contâiners](#6---Removendo-Contâiners)
 - [7 - Acessar e Alterar arquivos dentro de um contâiner](#7---Acessar-e-Alterar-arquivos-dentro-de-um-contâiner)
 - [8 - Trabalhando com bind mounts](#8---Trabalhando-com-bind-mounts)
-- [9 - Trabalhando com Volumes](#-9---Trabalhando-com-Volumes)
-- [10 - Trabalhando com Imagens](#-10---Trabalhando-com-Imagens)
-    - [10.1 - Criando primeira imagem com Dockerfile](##-10.1---Criando-primeira-imagem-com-Dockerfile)
+- [9 - Trabalhando com Volumes](#9---Trabalhando-com-Volumes)
+- [10 - Trabalhando com Imagens](#10---Trabalhando-com-Imagens)
+    - [10.1 - Criando primeira imagem com Dockerfile](##10.1---Criando-primeira-imagem-com-Dockerfile)
 
 
 
@@ -349,3 +349,5 @@ docker images
 ```
 docker run -it williamsasantos/nginx-com-vim bash
 ```
+
+9---Trabalhando-com-Volumes
