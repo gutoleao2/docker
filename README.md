@@ -10,7 +10,11 @@ This is about Docker (My notes for docker use are saved here. is my personal sou
 - [6 - Removendo Contâiners](#6---Removendo-Contâiners)
 - [7 - Acessar e Alterar arquivos dentro de um contâiner](#7---Acessar-e-Alterar-arquivos-dentro-de-um-contâiner)
 - [8 - Trabalhando com bind mounts](#8---Trabalhando-com-bind-mounts)
-- [# 9 - Trabalhando com Volumes](#-9---Trabalhando-com-Volumes)
+- [9 - Trabalhando com Volumes](#-9---Trabalhando-com-Volumes)
+- [10 - Trabalhando com Imagens](#-10---Trabalhando-com-Imagens)
+    - [10.1 - Criando primeira imagem com Dockerfile](##-10.1---Criando-primeira-imagem-com-Dockerfile)
+
+
 
 # 1 - Instalação do WSL 2
 
@@ -172,15 +176,15 @@ docker run hello-world
 Vizualizar os containers
 
 ```
-docker ps     -> Os que estão rodando
-docker ps -a  -> Todos
+docker ps           # -> Os que estão rodando
+docker ps -a        # -> Todos
 ```
 
 Para Rodar ou Parar um cotâiner existente
 ```
-docker start primeiro-container     -> docker start <nome-container ou id>
-docker stop primeiro-container      -> docker stop <nome-container ou id>
-docker stop -f primeiro-container   -> forçar a parada
+docker start primeiro-container                     # -> docker start <nome-container ou id>
+docker stop primeiro-container                      # -> docker stop <nome-container ou id>
+docker stop -f primeiro-container                   # -> forçar a parada
 ```
 
 # 4 - Interagindo com Imagens
@@ -206,8 +210,8 @@ docker run -it --rm ubuntu bash
 
 
 ```
-docker run -p 8080:80 nginx       -> O terminal fica 'preso'
-docker run -d -p 8080:80 nginx    -> O terminal fica livre
+docker run -p 8080:80 nginx                         # -> O terminal fica 'preso'
+docker run -d -p 8080:80 nginx                      # -> O terminal fica livre
 ```
 
 * O comando acima significa dizer que quando eu acessar localhost na porta ```8080``` ele deverá direcionar para a porta ```80``` do contâiner.
@@ -219,9 +223,9 @@ docker run -d -p 8080:80 nginx    -> O terminal fica livre
 É possível remover contâiners não utilizados ou mesmo em uso.
 
 ```
-docker rm 9b8898bf88ef                -> rm <id ou nome do contanier>
-docker rm 9b8898bf88ef b51d1648d59a   -> rm <ids ou nome do contanier>
-docker rm -f 9b8898bf88ef             -> -f força a parada e remoção do processo
+docker rm 9b8898bf88ef                             # -> rm <id ou nome do contanier>
+docker rm 9b8898bf88ef b51d1648d59a                # -> rm <ids ou nome do contanier>
+docker rm -f 9b8898bf88ef                          # -> -f força a parada e remoção do processo
 ```
 
 # 7 - Acessar e Alterar arquivos dentro de um contâiner
@@ -233,13 +237,13 @@ docker run -d --name nginx -p 8080:80 nginx
 
 Executar Comandos dentro do container
 ```
-docker exec nginx ls    -> vai rodar o comando 'ls' dentro do container 
+docker exec nginx ls                # -> vai rodar o comando 'ls' dentro do container 
 ```
 * O comando acima, vai executar e sair. Ou seja, entrar no contâiner, listar os diretórios e sair.
 
 Acessar o bash do container
 ```
-docker exec -it nginx bash   -> vai rodar o comando 'bash' dentro do container 
+docker exec -it nginx bash          # -> vai rodar o comando 'bash' dentro do container 
 ```
 * O comando acima, vai executar o bash e permanecer até que o usuário queira finalizar.
 
@@ -267,7 +271,7 @@ Ao usar o ```bind mounts``` nós estamos simplesmente ligando uma pasta com uma 
 
 Criar Volumes
 ```
-docker volume create meu-volume   ->  <meu-volume> é o nome do volume a ser criado
+docker volume create meu-volume         # ->  <meu-volume> é o nome do volume a ser criado
 ```
 
 Informações de Volumes
@@ -304,4 +308,44 @@ docker run --name nginx -p 8080:80 -d -v meu-volume:/app nginx
 Limpar dados de volume
 ```
 docker volume prune
+```
+
+# 10 - Trabalhando com Imagens
+
+Imagens docker são arquivos que contêm todas as informações necessárias para executar um aplicativo ou um serviço em um contêiner. As imagens docker ficam armazenadas em um repositório online chamado Docker Hub, onde você pode baixar, criar e compartilhar imagens com outros usuários.
+
+## 10.1 - Criando primeira imagem com Dockerfile
+
+O Dockerfile é nossa receita que indica tudo o que estará contido na minha imagem.
+
+
+Exemplo de criação de Dockerfile com uma imagem do nginx:
+
+1 - Criar o arquivo Dockerfile
+```
+# 'FROM' indica a Imagem que quero usar e ':latest', indica a versão
+FROM nginx:latest               
+
+# 'RUN' indica que quero rodar um comando
+RUN apt-get update              # atualizar os pacotes do linux
+RUN apt-get install vim -y      # instalar o vim
+```
+
+2 - Fazer o build da imagem
+
+```
+docker build -t williamsasantos/nginx-com-vim:latest .  # -> vide explicação abaixo.
+```
+
+O -t serve para indicar o nome:     
+ -t <usuario_docker_hub>/<nome_que_quero_dar>:versao <local_do_pc_onde_quero_gerar_a_imagem>
+
+3 - Verificar a existência da imagem com o nome que foi atribuido.
+```
+docker images
+```
+
+4 - Acessar a imagem criada
+```
+docker run -it williamsasantos/nginx-com-vim bash
 ```
