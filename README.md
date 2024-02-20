@@ -13,6 +13,9 @@ This is about Docker (My notes for docker use are saved here. is my personal sou
 - [9 - Trabalhando com Volumes](#9---Trabalhando-com-Volumes)
 - [10 - Trabalhando com Imagens](#10---Trabalhando-com-Imagens)
     - [10.1 - Criando primeira imagem com Dockerfile](##10.1---Criando-primeira-imagem-com-Dockerfile)
+    - [10.2 - ENTRYPOINT vs CMD](####10.2---ENTRYPOINT-vs-CMD)
+    - [10.3 - Publicando imagens no DockerHub](####10.3---Publicando-imagens-no-DockerHub)
+- [11 - Networks](#11---Networks)
 
 
 
@@ -321,17 +324,24 @@ O Dockerfile é nossa receita que indica tudo o que estará contido na minha ima
 
 Exemplo de criação de Dockerfile com uma imagem do nginx:
 
-1 - Criar o arquivo Dockerfile
+* 1 - Criar o arquivo Dockerfile
 ```
 # 'FROM' indica a Imagem que quero usar e ':latest', indica a versão
 FROM nginx:latest               
 
+# Indica o diretório de trabalho. Onde o programa irá rodar
+WORKDIR /app    
+
 # 'RUN' indica que quero rodar um comando
-RUN apt-get update              # atualizar os pacotes do linux
-RUN apt-get install vim -y      # instalar o vim
+# atualizar os pacotes do linux e instalar o vim
+RUN apt-get update && \
+    apt-get install vim -y      
+
+# Copiando dados da pasta local 'html' para a pasta 'html' dentro do container
+COPY html/ /usr/share/nginx/html
 ```
 
-2 - Fazer o build da imagem
+* 2 - Fazer o build da imagem
 
 ```
 docker build -t williamsasantos/nginx-com-vim:latest .  # -> vide explicação abaixo.
@@ -340,14 +350,113 @@ docker build -t williamsasantos/nginx-com-vim:latest .  # -> vide explicação a
 O -t serve para indicar o nome:     
  -t <usuario_docker_hub>/<nome_que_quero_dar>:versao <local_do_pc_onde_quero_gerar_a_imagem>
 
-3 - Verificar a existência da imagem com o nome que foi atribuido.
+* 3 - Verificar a existência da imagem com o nome que foi atribuido.
 ```
 docker images
 ```
 
-4 - Acessar a imagem criada
+* 4 - Acessar a imagem criada
 ```
 docker run -it williamsasantos/nginx-com-vim bash
 ```
 
-9---Trabalhando-com-Volumes
+* 5 - Remover imagem criada ou container
+```
+docker rm (docker ps -a -q) -f          # -> remove todos os container
+docker rmi $(docker images -a -q) -f    # -> remove todas as imagens
+```
+
+## 10.2 - ENTRYPOINT vs CMD
+CMD: 
+    O comando CMD executa algo depois de rodar a imagem e pode ser substituído por um comando ao executar uma imagem.
+    Ou seja, ao usar CMD, temos um comando variável.
+
+ENTRYPOINT:
+    Utilizando este comando, teremos uma linha de comando fixa. Ou seja, o que estiver declarado na imagem será executado sem a possibilidade de alterações.
+
+
+* 1 - Criar o arquivo Dockerfile
+```
+# 'FROM' indica a Imagem que quero usar e ':latest', indica a versão
+FROM ubuntu:latest               
+
+ENTRYPOINT [ "echo", "Hello "]  
+CMD [ "World !" ]
+
+```
+
+* 2 - Build e Run
+```
+$ docker build -t williamsasantos/ubuntu:latest .  
+$ docker run -t williamsasantos/ubuntu
+Hello  World !                                      
+$ docker run -t williamsasantos/ubuntu Guto!            # -> adicionar um comando ao final do run
+Hello  Guto!                                            # -> O resultado é que ele é executado substituindo o comando existente no dockerfile
+```
+
+## 10.3 - Publicando imagens no DockerHub
+
+* 1 - Criar uma imagem a partir da imagem pronta do nginx, e substituir o arquivo index.html por um que criei com meu nome.
+    Logo após, irá executar o comando ENTRYPOINT e por fim, o CMD
+
+```
+FROM nginx:latest               
+
+WORKDIR /app    
+
+RUN apt-get update && \
+    apt-get install vim -y      
+
+COPY html/ /usr/share/nginx/html
+
+ENTRYPOINT ["/docker-entrypoint.sh"]
+CMD ["nginx", "-g", "daemon off;"]
+```
+
+* 2 - Build e Run
+```
+$ docker build -t williamsasantos/nginx-vim:latest . 
+$ docker run --rm -d -p 8080:80 williamsasantos/nginx-vim       # -> -d garante que a execução não prenda o terminal. --rm remove o contâiner assim que ele for derrubado.
+```
+
+* 3 - Criar conta no DockerHub(https://hub.docker.com/) e fazer Login
+* Login
+
+```
+$ docker login
+Log in with your Docker ID or email address to push and pull images from Docker Hub. If you don't have a Docker ID, head over to https://hub.docker.com/ to create one.
+You can log in with your password or a Personal Access Token (PAT). Using a limited-scope PAT grants better security and is required for organizations using SSO. Learn more at https://docs.docker.com/go/access-tokens/
+
+Username: williamsasantos
+Password:
+
+Login Succeeded
+```
+
+* Push ( A partir daqui, qualquer pessoa poderá usar esta imagem apenas rodando o RUN 'docker run williamsasantos/nginx-vim')
+```
+$ docker push williamsasantos/nginx-vim
+Using default tag: latest
+The push refers to repository [docker.io/williamsasantos/nginx-vim]
+fbc4840017ec: Pushed
+latest: digest: sha256:1d243fc8d3812aaf90f9adf41ee5654acd7d5dbd04c67fc43f11396aae3ab13d size: 2403
+```
+
+
+# 11 - Networks
+O Docker possui uma rede interna que roda dentro dele.
+Um dos principais usos dessas redes, é a comunicação entre containers.
+Os principais TIPOS de rede são 'bridge' , 'host', 'overlay' e 'none'
+
+## Bridge
+* Este é o tipo de rede padrão. Quando se cria uma network e não se informa um tipo, ele é bridge.
+
+## Host
+* Este tipo, faz com que o container use a mesma rede do docker host, ou seja ele vai usar a rede do computador onde o docker está rodando.
+
+## Overlay
+* Quando tenho containers que estão em máquinas e redes diferentes e preciso fazer comunicação entre eles.
+
+## None
+* Quando o container não precisa se comunicar com algum outro.
+
