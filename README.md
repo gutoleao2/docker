@@ -419,8 +419,7 @@ $ docker build -t williamsasantos/nginx-vim:latest .
 $ docker run --rm -d -p 8080:80 williamsasantos/nginx-vim       # -> -d garante que a execução não prenda o terminal. --rm remove o contâiner assim que ele for derrubado.
 ```
 
-* 3 - Criar conta no DockerHub(https://hub.docker.com/) e fazer Login
-* Login
+* 3 - Criar conta no DockerHub(https://hub.docker.com/) e fazer Login 
 
 ```
 $ docker login
@@ -433,7 +432,7 @@ Password:
 Login Succeeded
 ```
 
-* Push ( A partir daqui, qualquer pessoa poderá usar esta imagem apenas rodando o RUN 'docker run williamsasantos/nginx-vim')
+* 4 - Push ( A partir daqui, qualquer pessoa poderá usar esta imagem apenas rodando o RUN 'docker run williamsasantos/nginx-vim')
 ```
 $ docker push williamsasantos/nginx-vim
 Using default tag: latest
@@ -446,13 +445,192 @@ latest: digest: sha256:1d243fc8d3812aaf90f9adf41ee5654acd7d5dbd04c67fc43f11396aa
 # 11 - Networks
 O Docker possui uma rede interna que roda dentro dele.
 Um dos principais usos dessas redes, é a comunicação entre containers.
-Os principais TIPOS de rede são 'bridge' , 'host', 'overlay' e 'none'
+Os principais TIPOS de rede são 'bridge' , 'host', 'overlay' e 'none'.
+
+Comandos comuns no uso de network:
+```
+docker network ls                                               # -> Lista todas as redes existentes~
+docker network prune                                            # -> Remove todas as redes sem uso
+docker network inspect bridge                                   # -> Mostra detalhes da rede bridge, como por exemplo quem está nela.
+docker network create --driver bridge minharede                 # -> Cria uma rede bridge
+$ docker run --rm -d --name nginx --network host nginx          # -> Cria uma rede host
+docker run -d -it --name ubuntu1 --network minharede bash       # -> Cria um container dentro de uma rede específica
+docker network connect minharede ubuntu3                        # -> Conecta um container já existente a uma rede específica
+```
 
 ## Bridge
 * Este é o tipo de rede padrão. Quando se cria uma network e não se informa um tipo, ele é bridge.
 
+Para exemplificar este tipo de rede, vamos criar dois containers e realizar a inspeção da rede.
+Podemos verificar que os dois containers estão usando a rede bridge:
+
+```
+docker run -d -it --name ubuntu1 bash               # -> container1
+docker run -d -it --name ubuntu2 bash               # -> container2
+docker network inspect bridge 
+# Resultado: 
+[
+    {
+        "Name": "bridge",
+        "Id": "6a1adba54eb29874ce4bdcb59c13b75a353a1afff6abe601406f329b9adb4d57",
+        "Created": "2024-02-21T21:20:56.7750646-03:00",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": null,
+            "Config": [
+                {
+                    "Subnet": "172.17.0.0/16",
+                    "Gateway": "172.17.0.1"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Containers": {
+            "452c128002a6b8ed947e97ea8904eb14f6ee4cfa7ab9e28fb8c9980c8fcd35b2": {
+                "Name": "ubuntu2",
+                "EndpointID": "786d0cb3efdc8e64658226063cdd1d4d4dbadd2fd14b81451ff5e4ccb9e1488b",
+                "MacAddress": "02:42:ac:11:00:03",
+                "IPv4Address": "172.17.0.3/16",
+                "IPv6Address": ""
+            },
+            "8ae351bc0623d86cc7cbfa68d828cb60c20716ee78281813dcf584e02cb11c42": {
+                "Name": "ubuntu1",
+                "EndpointID": "2c3a71297869adf640c87a892351fc6cf64dd1131d21a4264813a920705bbbe9",
+                "MacAddress": "02:42:ac:11:00:02",
+                "IPv4Address": "172.17.0.2/16",
+                "IPv6Address": ""
+            }
+        },
+        "Options": {
+            "com.docker.network.bridge.default_bridge": "true",
+            "com.docker.network.bridge.enable_icc": "true",
+            "com.docker.network.bridge.enable_ip_masquerade": "true",
+            "com.docker.network.bridge.host_binding_ipv4": "0.0.0.0",
+            "com.docker.network.bridge.name": "docker0",
+            "com.docker.network.driver.mtu": "1500"
+        },
+        "Labels": {}
+    }
+]
+```
+
+
+Podemos também acessar um container criado e através dele, fazer um ping para outro container na mesma rede:
+
+```
+docker attach ubuntu1                         # -> Acessar um container que esteja rodando de forma não atachada
+
+bash-5.2# ip addr show                        # -> exibir infos de rede dentro de uma máquina linux
+
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+4: eth0@if5: <BROADCAST,MULTICAST,UP,LOWER_UP,M-DOWN> mtu 1500 qdisc noqueue state UP
+    link/ether 02:42:ac:11:00:02 brd ff:ff:ff:ff:ff:ff
+    inet 172.17.0.2/16 brd 172.17.255.255 scope global eth0
+       valid_lft forever preferred_lft forever
+
+bash-5.2# ping 172.17.0.3/16                    # -> Fazer ping no outro container dentro da rede
+
+ping: bad address '172.17.0.3/16'
+bash-5.2# ping 172.17.0.3
+PING 172.17.0.3 (172.17.0.3): 56 data bytes
+64 bytes from 172.17.0.3: seq=0 ttl=64 time=0.137 ms
+64 bytes from 172.17.0.3: seq=1 ttl=64 time=0.218 ms
+64 bytes from 172.17.0.3: seq=2 ttl=64 time=0.080 ms
+^C
+--- 172.17.0.3 ping statistics ---
+3 packets transmitted, 3 packets received, 0% packet loss
+round-trip min/avg/max = 0.080/0.145/0.218 ms
+```
+
+Obs: Por padrão, utilizando o tipo de rede bridge, não é possível fazer ping pelo nome das máquinas, mas somente pelo ip.
+Mas este problema é solucionado ao criar uma nova rede brigde ao invés de usar a rede padrão.
+
+```
+$ docker network create --driver bridge minharede                       # -> Criando uma rede bridge
+cf96708e5d4f6e348ed9132d8c1c1cbb6dd054fef630a19d726df98d84101ec9
+$ docker network ls                                                     # -> Listando as redes
+NETWORK ID     NAME        DRIVER    SCOPE
+6a1adba54eb2   bridge      bridge    local
+c6f288ad4539   host        host      local
+cf96708e5d4f   minharede   bridge    local
+709f78e2e056   none        null      local
+$ docker run -d -it --name ubuntu1 --network minharede bash             # -> Criando um container
+491c0d247febbf88b865fc90b5499bdf11e5a3b24bb05f9d19524fe8cabded9f
+$ docker run -d -it --name ubuntu2 --network minharede bash             # -> Criando outro container
+f141e65b9ab830223e41b41ba0d95364a4914e852715d25d3819f031b058b651
+$ docker exec -it ubuntu1 bash                                          # -> Acessando um dos containers
+bash-5.2# ping ubuntu2                                                  # -> Fazer ping no outro container dentro da rede
+PING ubuntu2 (172.18.0.3): 56 data bytes
+64 bytes from 172.18.0.3: seq=0 ttl=64 time=0.116 ms
+64 bytes from 172.18.0.3: seq=1 ttl=64 time=0.120 ms
+64 bytes from 172.18.0.3: seq=2 ttl=64 time=0.102 ms
+^C
+--- ubuntu2 ping statistics ---
+3 packets transmitted, 3 packets received, 0% packet loss
+round-trip min/avg/max = 0.102/0.112/0.120 ms
+```
+
+
 ## Host
 * Este tipo, faz com que o container use a mesma rede do docker host, ou seja ele vai usar a rede do computador onde o docker está rodando.
+
+Para exemplificar este tipo, vamos criar um container com a imagem do nginx.
+Ao acessar via console ou navegar o endereço 'http://localhost' direto de minha máquina, devemos ter como retorno a página do nginx.
+
+```
+docker run --rm -d --name nginx --network host nginx              # -> Cria e remove o container quando ele for derrubado
+e76b77c0b2763ce11224c63319c3d68e098039c4641c3760f930d3b7d0a78015
+```
+Microsoft Windows [versão 10.0.19045.4046]
+(c) Microsoft Corporation. Todos os direitos reservados.
+
+````
+C:\Users\will> curl http://localhost        # -> Este comando é na minha máquina, não no container!
+
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+<style>
+html { color-scheme: light dark; }
+body { width: 35em; margin: 0 auto;
+font-family: Tahoma, Verdana, Arial, sans-serif; }
+</style>
+</head>
+<body>
+<h1>Welcome to nginx!</h1>
+<p>If you see this page, the nginx web server is successfully installed and
+working. Further configuration is required.</p>
+
+<p>For online documentation and support please refer to
+<a href="http://nginx.org/">nginx.org</a>.<br/>
+Commercial support is available at
+<a href="http://nginx.com/">nginx.com</a>.</p>
+
+<p><em>Thank you for using nginx.</em></p>
+</body>
+</html>
+````
+
+Também é possível inverter, fazendo com que o container acesse a máquina local.
+Para este exemplo, vamos supor que existe algum serviço que o container precisa acessar na porta 8000 da máquina local:
+
+```
+curl http://host.docker.internal:8000
+```
+
 
 ## Overlay
 * Quando tenho containers que estão em máquinas e redes diferentes e preciso fazer comunicação entre eles.
