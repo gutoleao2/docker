@@ -638,3 +638,94 @@ curl http://host.docker.internal:8000
 ## None
 * Quando o container não precisa se comunicar com algum outro.
 
+# 12 - Instalando Framework em um container
+
+A dica aqui, é: sempre que precisar criar uma imagem, vá executando os processos de instalação no seu computador e copie os comandos até a finalização do processo, ou seja, até que o framework que você precisa instalar esteja rodando perfeitamente.
+
+Neste caso, vamos usar uma imagem laravel(php):
+
+```
+FROM php:7.4-cli
+
+WORKDIR /var/www
+
+RUN apt-get update && \
+    apt-get install libzip-dev -y && \
+    docker-php-ext-install zip
+
+# Configuracoes php
+RUN php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');" && \
+    php composer-setup.php && \
+    php -r "unlink('composer-setup.php');"
+
+RUN php composer.phar create-project --prefer-dist laravel/laravel laravel
+
+# rodar e manter o service laravel rodando
+ENTRYPOINT [ "php" , "laravel/artisan", "serve"]
+
+# permitir acesso de qualquer host ao servico laravel rodando no container
+CMD [ "--host=0.0.0.0" ]
+```
+
+Build e execução da imagem
+```
+docker build -t williamsasantos/laravel:latest .
+
+docker run --rm -d --name laravel -p 8000:8000 williamsasantos/laravel
+```
+Acessando o navegador na porta indicada, veremos a página do laravel.
+
+
+No nosso exemplo, usamos o command para indicar que o service laravel poderia ser acessado por qualquer host, ou inserir --host=0.0.0.0.
+Por se tratar do CMD podemos então substituir este comando. 
+Agora, vamos mudar a porta e manter a permissão de acesso de outra forma:
+
+```
+docker run  -d --name laravel -p 8001:8001 williamsasantos/laravel --host=0.0.0.0 --port=8001
+```
+Acessando novamente o navegador na porta indicada, veremos a página do laravel.
+
+Publiucando a imagem:
+```
+docker login
+docker push williamsasantos/laravel:latest
+```
+
+# 13 - Criando ambiente de desenvolvimento para nodejs
+
+Neste exemplo, vamos criar um simples app node com express que vai retornar um 'hello world'.
+Aqui a ideia é cria um ambiente com tudo que é necessário para desenvolver e rodar um service nodejs no container, onde o código vai estar no pc local e a execução será no container.
+
+Criando o container com um volume para permitir acesso da minha máquina para uma pasta do container:
+```
+docker run --rm -it -v $(pwd)/:/usr/src/app -p 3000:3000 node:15 bash
+```
+
+Instalando express e criando o package:
+```
+cd usr/src/app/
+npm install express
+npm init -y
+touch index.js              # Cria o aquivo index.js
+```
+
+Criando um servico (basta editar o arquivo index criado anteriormente):
+```
+const express = require('express');
+const app = express();
+const port = 3000;
+
+app.get('/', (req, res) => {
+    res.send('<h1>Hello World</h1>');
+})
+
+app.listen(port, () => console.log('Rodando na porta ' + port))
+```
+
+Rodando o service express
+```
+node index.js
+```
+
+Agora, ao acessar localhost na porta 3000, o service deve responder.
+
