@@ -16,6 +16,8 @@ This is about Docker (My notes for docker use are saved here. is my personal sou
     - [10.2 - ENTRYPOINT vs CMD](####10.2---ENTRYPOINT-vs-CMD)
     - [10.3 - Publicando imagens no DockerHub](####10.3---Publicando-imagens-no-DockerHub)
 - [11 - Networks](#11---Networks)
+- [12 - Instalando Framework em um container](#12---Instalando-Framework-em-um-container)
+- [13 - Criando ambiente de desenvolvimento para nodejs](#13---Criando-ambiente-de-desenvolvimento-para-nodejs)
 
 
 
@@ -726,6 +728,46 @@ Rodando o service express
 ```
 node index.js
 ```
-
 Agora, ao acessar localhost na porta 3000, o service deve responder.
+
+
+* Dica!
+É possível criar um dockerfile por cada ambiente, sendo assim vamos criar um para dev e outro para prod.
+A nível de exemplo, No caso de prod vamos copiar todo o conteúdo local, no de dev vamos instalar as dependências:
+
+Criando os Dockerfile:
+
+Dockerfile.prod
+
+```
+FROM node:15
+
+WORKDIR /usr/src/app
+
+# Copia o conteúdo local para a pasta do workdir
+COPY . .
+
+EXPOSE 3000
+
+CMD [ "node", "index.js" ]
+```
+
+Para executar o build do arquivo de prod:
+```
+docker build -t willimasasantos/node-express:latest . -f Dockerfile.prod
+```
+
+Dockerfile
+```
+FROM node:15
+
+WORKDIR /usr/src/app
+
+RUN npm install express && \
+    npm init -y 
+
+EXPOSE 3000
+
+CMD [ "node", "index.js" ]
+```
 
