@@ -771,3 +771,56 @@ EXPOSE 3000
 CMD [ "node", "index.js" ]
 ```
 
+# 14 - Otimização utilizando Multistage Building
+
+Neste tópico vamos aprender a otimizar imagens. O objetivo é reduzir ao máximo o tamanho dos nossos containers para o ambiente produtivo, isto não só reduz o tamanho mas também torna mais segura.
+No nosso caso estamos usando uma imagem 'php:7.4-cli' e instalando alguns pacotes que acabam deixando a imagem mais pesada do que deveria. 
+Então, vamos criar um nome para o primeiro stage do dockerfile e depois, no segundo stage, recuperar dele só o que nos interessa.
+
+* Dica: normalmente as imagens Alpine linux são menores !
+
+Obs: Vamos otimizar a imagem gerada no tópico [12 - Instalando Framework em um container](#12---Instalando-Framework-em-um-container).
+
+
+Criando nossa imagem:
+```
+# stage 1
+FROM php:7.4-cli AS builder 
+
+WORKDIR /var/www
+
+RUN apt-get update && \
+    apt-get install libzip-dev -y && \
+    docker-php-ext-install zip
+
+# Configuracoes php
+RUN php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');" && \
+    php composer-setup.php && \
+    php -r "unlink('composer-setup.php');"
+
+RUN php composer.phar create-project --prefer-dist laravel/laravel laravel
+
+
+# stage 2
+# 0 - Dar nome ao build acima (AS builder na primeira linha - poderia ser qualquer nome)
+# 1 - usar a imagem abaixo por ser mais enxuta.
+# 2 - setar o diretório de trabalho e remover e limpar o que estiver nele para inserir o que queremos.
+# 3 - copiar o conteúdo da pasta '/var/www/laravel' existente no builder do stage 1, para a pasta especificada como workdir     
+# 4 - mudar dono da pasta de trabalho para evitar problemas de permissão (chown)
+# 5 - expor uma porta e rodar o comando para subir o serviço  
+FROM php:7.4-fpm-alpine
+WORKDIR /var/www
+RUN rm -rf /var/www/html
+COPY --from=builder /var/www/laravel .
+RUN chown -R www-data:www-data /var/www
+EXPOSE 9000
+CMD [ "php-fpm" ]
+```
+
+Após build e comparação das imagem gerada antes da otimização com a versão de prod vemos a grande diferença de tamanho:
+````
+$ docker build -t williamsasantos/laravel:prod -f Dockerfile.prod .
+$ docker images | grep laravel
+williamsasantos/laravel              prod      41404b9d5bf1   23 minutes ago   141MB
+williamsasantos/laravel              latest    0df96b95d05c   29 hours ago     555MB
+```
