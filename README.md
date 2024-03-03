@@ -18,7 +18,11 @@ This is about Docker (My notes for docker use are saved here. is my personal sou
 - [11 - Networks](#11---Networks)
 - [12 - Instalando Framework em um container](#12---Instalando-Framework-em-um-container)
 - [13 - Criando ambiente de desenvolvimento para nodejs](#13---Criando-ambiente-de-desenvolvimento-para-nodejs)
-
+- [15 - Docker Compose](#15---Docker-Compose)
+    - [15.1 - Buildando imagens com docker-compose](##15.1---Buildando-imagens-com-docker-compose)
+    - [15.2 - Criando banco de dados MYSql](##15.2---Criando-banco-de-dados-MYSql)
+    - [15.3 - Adicionando app node com docker-compose](##15.3---Adicionando-app-node-com-docker-compose)
+    - [15.4 - Adicionando tabela e fazendo o primeiro insert com node em container com o mysql(db)](##15.4---Adicionando-tabela-e-fazendo-o-primeiro-insert-com-node-em-container-com-o-mysql(db))
 
 
 # 1 - Instalação do WSL 2
@@ -818,9 +822,286 @@ CMD [ "php-fpm" ]
 ```
 
 Após build e comparação das imagem gerada antes da otimização com a versão de prod vemos a grande diferença de tamanho:
-````
+```
 $ docker build -t williamsasantos/laravel:prod -f Dockerfile.prod .
 $ docker images | grep laravel
 williamsasantos/laravel              prod      41404b9d5bf1   23 minutes ago   141MB
 williamsasantos/laravel              latest    0df96b95d05c   29 hours ago     555MB
 ```
+
+# 15 - Docker Compose
+
+Comandos comuns no uso de docker-compose:
+```
+docker-compose up -d                               # -> subir o que estiver no compose deixando o terminal livre
+docker-compose ps                                  # -> listar services do compose
+docker-compose down                                # -> derrubar os services do compose
+docker-compose up -d --build                       # -> sobe os services rebuildando com o conteúdo que estiver sendo referenciado no compose
+```
+
+Docker compose é uma ferramenta complementar ao docker e veio para facilitar o trabalho.
+Para montar um ambiente com containers é preciso escrever vários Dockerfiles e subir separadamente.
+Com o docker-compose, podemos escrever num único arquivo quais os 'services' que queremos subir e quais as suas configurações e ao final num único comando, subir todo o conteúdo.
+
+
+No exemplo abaixo, estou usando a versão 3 do docker-compose, subindo dois services/containers, criando e utilizando uma rede
+```
+version: '3'
+
+services:
+
+  laravel:
+    image: williamsasantos/laravel:prod
+    container_name: laravel
+    networks:
+      - laranet
+  
+  nginx:
+    image: williamsasantos/nginx:prod
+    container_name: nginx
+    networks:
+      - laranet
+    ports:
+      - "8080:80"
+
+networks:
+  laranet:
+    driver: bridge
+```
+
+Rodando o docker compose
+```
+docker-compose up -d 
+```
+
+# 15.1 - Buildando imagens com docker-compose
+
+No exemplo anterior, usamos imagens fixas/específicas dentro do nosso composer.
+Agora, vamos referenciar arquivos dockerfile para fazer build delas a fim de que possamos modificar as imagens e que queremos utilizar e havendo mudança, possamos subir container atualizados via compose.
+
+
+```
+version: '3'
+
+services:
+
+  laravel:
+    build:
+      # pasta onde o docker file está
+      context: ../laravel
+      # arquivo docker que quero subir
+      dockerfile: Dockerfile.prod
+    image: williamsasantos/laravel:prod
+    container_name: laravel
+    networks:
+      - laranet
+  
+  nginx:
+    build: 
+      # pasta onde o docker file está
+      context: ../nginx
+      # arquivo docker que quero subir
+      dockerfile: Dockerfile.prod
+    image: williamsasantos/nginx:prod
+    container_name: nginx
+    networks:
+      - laranet
+    ports:
+      - "8080:80"
+
+networks:
+  laranet:
+    driver: bridge
+
+```
+
+Obs!
+O compose não identifica mudanças automaticamente, por isto, sempre que houver mudanças é preciso sinalizar para que haja build.
+
+Buildando e subindo de docker-compose:
+```
+docker-compose up -d --build                       # -> sobe os services rebuildando com o conteúdo que estiver sendo referenciado no compose
+```
+
+# 15.2 - Criando banco de dados MYSql 
+
+Vamos criar um docker-compose que tem a finalidade de subir um app nodejs que vai se conectar a um bando de dados mysql.
+
+Criação do docker-compose com o mysql:
+
+```
+version: '3'
+
+services:
+
+  db:
+    image: mysql:5.7
+    # comando padrão para boot no container
+    command: --innodb-use-native-aio=0
+    container_name: db
+    # para que se houver algum problema e o container cair, ele vai subir outro automáticamente
+    restart: always
+    # se precisar entrar no service de forma interativa, precisa habilitar o tty
+    tty: true
+    # volumes para que quando o container morrer, não percamos o conteúdo do mysql.
+    # ou seja, tudo que for inserido dentro do container na pasta '/var/lib/mysql' será escrito também na pasta local './mysql'
+    volumes:
+      - ./mysql:/var/lib/mysql
+    # Setar variáveis de ambiente no container
+    environment:
+      - MYSQL_DATABASE=nodedb
+      - MYSQL_ROOT_PASSWORD=root
+      # - MYSQL_USER=root
+    # usar rede específica
+    networks:
+      - node-network
+
+# criar uma rede
+networks:
+  node-network:
+    driver: bridge
+```
+
+# 15.3 - Adicionando app node com docker-compose
+
+Vamos agora, adicionar o nosso app nodejs referenciando o projeto exemplo que usamos no item 13 (#13---Criando-ambiente-de-desenvolvimento-para-nodejs)
+```
+version: '3'
+
+services:
+
+  nodejs:
+    build: 
+      context: ./nodejs
+    container_name: app
+    networks:
+      - node-network
+    volumes:
+      - ./nodejs:/usr/src/app
+    tty: true
+    ports:
+      - "3000:3000"
+
+  db:
+    image: mysql:5.7
+    # comando padrão para boot no container
+    command: --innodb-use-native-aio=0
+    container_name: db
+    # para que se houver algum problema e o container cair, ele vai subir outro automáticamente
+    restart: always
+    # se precisar entrar no service de forma interativa, precisa habilitar o tty
+    tty: true
+    # volumes para que quando o container morrer, não percamos o conteúdo do mysql.
+    # ou seja, tudo que for inserido dentro do container na pasta '/var/lib/mysql' será escrito também na pasta local './mysql'
+    volumes:
+      - ./mysql-volume:/var/lib/mysql
+    # Setar variáveis de ambiente no container
+    environment:
+      - MYSQL_DATABASE=nodedb
+      - MYSQL_ROOT_PASSWORD=root
+      # - MYSQL_USER=root
+    # usar rede específica
+    networks:
+      - node-network
+
+# criar uma rede
+networks:
+  node-network:
+    driver: bridge
+```
+
+# 15.4 - Adicionando tabela e fazendo o primeiro insert com node em container com o mysql(db)
+
+Primeiro, vamos buildar e rodar o docker-compose
+
+```
+docker-compose up -d --build
+```
+
+Agora, vamos acessar o container DB, depois acessar o mysql e criar um database e tabela
+```
+docker exec -it db bash
+mysql -uroot -p
+mysql> use nodedb;
+Database changed
+mysql> create table people(id int not null auto_increment, name varchar(255), primary key(id));
+Query OK, 0 rows affected (0.02 sec)
+
+mysql> show databases;
++--------------------+
+| Database           |
++--------------------+
+| information_schema |
+| mysql              |
+| nodedb             |
+| performance_schema |
+| sys                |
++--------------------+
+mysql> desc people;
++-------+--------------+------+-----+---------+----------------+
+| Field | Type         | Null | Key | Default | Extra          |
++-------+--------------+------+-----+---------+----------------+
+| id    | int(11)      | NO   | PRI | NULL    | auto_increment |
+| name  | varchar(255) | YES  |     | NULL    |                |
++-------+--------------+------+-----+---------+----------------+
+2 rows in set (0.00 sec)
+```
+
+Agora, vamos acessar o container APP, e instalar o pacote npm do mysql e editar o arquivo index.js do nodejs
+
+```
+docker exec -t app bash
+npm install mysql --save
+```
+
+arquivo index.js: 
+```
+const express = require('express');
+const app = express();
+const port = 3000;
+const mysql = require('mysql');
+
+const configDb = {
+    host: 'db',
+    user: 'root',
+    password: 'root',
+    database: 'nodedb'
+}
+
+const connection = mysql.createConnection(configDb);
+
+const sql = `INSERT INTO people(name) values('Guto')`;
+connection.query(sql);
+connection.end();
+
+
+app.get('/hello', (req, res) => {
+    res.send('<h1>Hello World</h1>');
+})
+
+app.listen(port, () => console.log('Rodando na porta ' + port))
+```
+
+
+Agora vamos rodar o servico devemos ter um insert na tabela people
+
+```
+node index.js 
+```
+
+Agora, vamos acessar o container DB e validar o insert
+```
+docker exec -it db bash
+mysql -uroot -p
+
+mysql> select * from people;
++----+------+
+| id | name |
++----+------+
+|  1 | Guto |
++----+------+
+1 row in set (0.00 sec)
+
+mysql>
+```
+
