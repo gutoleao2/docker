@@ -1155,9 +1155,9 @@ root@0a00bf898b4e:/usr/src/app# dockerize -wait tcp://db:3306
 root@0a00bf898b4e:/usr/src/app#
 ```
 
-Cenário DOWN (ele vai ficar esperando até que haja timeout)
+Cenário onde o db está DOWN (ele vai ficar esperando até que haja timeout)
 
-````
+```
 docker stop db
 docker exec -it app bash
 root@0a00bf898b4e:/usr/src/app# dockerize -wait tcp://db:3306
