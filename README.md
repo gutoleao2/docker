@@ -23,6 +23,7 @@ This is about Docker (My notes for docker use are saved here. is my personal sou
     - [15.2 - Criando banco de dados MYSql](##15.2---Criando-banco-de-dados-MYSql)
     - [15.3 - Adicionando app node com docker-compose](##15.3---Adicionando-app-node-com-docker-compose)
     - [15.4 - Adicionando tabela e fazendo o primeiro insert com node em container com o mysql(db)](##15.4---Adicionando-tabela-e-fazendo-o-primeiro-insert-com-node-em-container-com-o-mysql(db))
+    - [15.5 - Dependência entre containers](##15.5---Dependência-entre-containers)
 
 
 # 1 - Instalação do WSL 2
@@ -1104,4 +1105,149 @@ mysql> select * from people;
 
 mysql>
 ```
+
+# 15.5 - Dependência entre containers
+
+É um recurso utilizado para mapear dependências ou ordem de execução de services dentro do nosso composer.
+
+Para estudar este caso, vamos voltar ao tópico anterior, onde criamos um docker-compose que sobe dois containers: Um para banco de dados, e outro para app node.
+Agora, imaginando que nosso container de banco de dados não conseguiu ficar up e nossa aplicação tentou executar um insert ele daria erro e talvez até matasse o container.
+
+Para solucionar este caso, precisamos de uma mistura da propriedade depends_on com um recurso como por exemplo o 'dockerize - https://github.com/jwilder/dockerize'  para informar na nossa receita que o app só pode subir depois que a base subir.
+
+1 - Na nossa receita do container nodejs, vamos atualizar a versão para node:16 e adicionar os scripts do dockerize
+
+```
+FROM node:16
+
+WORKDIR /usr/src/app
+
+ENV DOCKERIZE_VERSION v0.7.0
+
+RUN apt-get update \
+    && apt-get install -y wget \
+    && wget -O - https://github.com/jwilder/dockerize/releases/download/$DOCKERIZE_VERSION/dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz | tar xzf - -C /usr/local/bin \
+    && apt-get autoremove -yqq --purge wget && rm -rf /var/lib/apt/lists/*
+
+EXPOSE 3000
+
+# CMD [ "node", "index.js" ]
+    
+```
+
+2 - Agora, vamos subir nosso compose dando um build pois houve alteração na receita de um dos containers, e depois acessar o container app e executar o comando dockerize para validar se está tudo ok
+
+```
+docker-compose up -d --build
+docker exec -it app bash
+root@0a00bf898b4e:/usr/src/app# dockerize
+For more information, see https://github.com/jwilder/dockerize
+
+```
+
+3 - Verificando se o container db está pronto:
+
+Cenário OK:
+```
+root@0a00bf898b4e:/usr/src/app# dockerize -wait tcp://db:3306
+2024/03/05 02:08:55 Waiting for: tcp://db:3306
+2024/03/05 02:08:55 Connected to tcp://db:3306
+root@0a00bf898b4e:/usr/src/app#
+```
+
+Cenário DOWN (ele vai ficar esperando até que haja timeout)
+
+````
+docker stop db
+docker exec -it app bash
+root@0a00bf898b4e:/usr/src/app# dockerize -wait tcp://db:3306
+2024/03/05 02:14:16 Waiting for: tcp://db:3306
+2024/03/05 02:14:18 Problem with dial: dial tcp: lookup db on 127.0.0.11:53: no such host. Sleeping 1s
+2024/03/05 02:14:21 Problem with dial: dial tcp: lookup db on 127.0.0.11:53: no such host. Sleeping 1s
+2024/03/05 02:14:24 Problem with dial: dial tcp: lookup db on 127.0.0.11:53: no such host. Sleeping 1s
+2024/03/05 02:14:26 Timeout after 10s waiting on dependencies to become available: [tcp://db:3306]
+```
+
+4 - Agora que está tudo funcionando, precisamos transportar o comando anterior para dentro de nossa receita do docker-compose. A fim de que o container app espere pelo db.
+
+Ajustando o docker-compose
+```
+version: '3'
+
+services:
+
+  nodejs:
+    build: 
+      context: ./nodejs
+    container_name: app
+    # Modificando o entrypoint padrão para que ele espere o container db ficar totalmente pronto e depois executa o entrypoint padrão já veio na imagem node:16
+    entrypoint: dockerize -wait tcp://db:3306 -timeout 20s docker-entrypoint.sh
+    networks:
+      - node-network
+    volumes:
+      - ./nodejs:/usr/src/app
+    tty: true
+    ports:
+      - "3000:3000"
+    # Define que este service só subirá depois do db
+    depends_on:
+      - db      
+
+  db:
+    image: mysql:5.7
+    # comando padrão para boot no container
+    command: --innodb-use-native-aio=0
+    container_name: db
+    # para que se houver algum problema e o container cair, ele vai subir outro automáticamente
+    restart: always
+    # se precisar entrar no service de forma interativa, precisa habilitar o tty
+    tty: true
+    # volumes para que quando o container morrer, não percamos o conteúdo do mysql.
+    # ou seja, tudo que for inserido dentro do container na pasta '/var/lib/mysql' será escrito também na pasta local './mysql'
+    volumes:
+      - ./mysql-volume:/var/lib/mysql
+    # Setar variáveis de ambiente no container
+    environment:
+      - MYSQL_DATABASE=nodedb
+      - MYSQL_ROOT_PASSWORD=root
+      # - MYSQL_USER=root
+    # usar rede específica
+    networks:
+      - node-network
+
+# criar uma rede
+networks:
+  node-network:
+    driver: bridge
+```
+
+Executando
+```
+$ docker-compose up -d --build
+$ docker-compose ps
+Name              Command               State                    Ports
+----------------------------------------------------------------------------------------
+app    dockerize -wait tcp://db:3 ...   Up      0.0.0.0:3000->3000/tcp,:::3000->3000/tcp
+db     docker-entrypoint.sh --inn ...   Up      3306/tcp, 33060/tcp
+$ docker logs app
+2024/03/05 02:19:50 Waiting for: tcp://db:3306
+2024/03/05 02:19:50 Connected to tcp://db:3306
+Welcome to Node.js v16.20.2.
+Type ".help" for more information.
+```
+
+Opções - Dependência entre containers
+
+Abaixo o repositório com informações sobre a configuração e pontos importantes sobre o wait-for-it.
+
+https://github.com/codeedu/docker-wait-for-it 
+
+docker - healthcheck
+
+Uma outro opção nativa do Docker é o healthcheck, com ele podemos verificar a integridade de um determinado container x e, caso ele esteja com o status = healthy, um container y pode se conectar à ele.
+
+No repositório abaixo temos mais informações sobre a utilização desta opção.
+
+https://github.com/devfullcycle/docker-healthcheck
+
 
