@@ -692,7 +692,7 @@ docker run  -d --name laravel -p 8001:8001 williamsasantos/laravel --host=0.0.0.
 ```
 Acessando novamente o navegador na porta indicada, veremos a página do laravel.
 
-Publiucando a imagem:
+Publicando a imagem:
 ```
 docker login
 docker push williamsasantos/laravel:latest
