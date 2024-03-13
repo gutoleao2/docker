@@ -1,3 +1,4 @@
+# Desafio
 Nesse desafio você colocará em prática o que aprendemos em relação a utilização do nginx como proxy reverso. A idéia principal é que quando um usuário acesse o nginx, o mesmo fará uma chamada em nossa aplicação node.js. Essa aplicação por sua vez adicionará um registro em nosso banco de dados mysql, cadastrando um nome na tabela people.
 
 O retorno da aplicação node.js para o nginx deverá ser:
@@ -11,3 +12,9 @@ Gere o docker-compose de uma forma que basta apenas rodarmos: docker-compose up 
 Suba tudo em um repositório e faça a entrega.
 
 * A linguagem de programação para este desafio é Node/JavaScript.
+
+# Solução
+1 - Faça clone do projeto
+2 - Criei um volume para sincronizar dados do container app com a máquina local:
+    - acesse a pasta node e rode o comando 'npm install'
+3 - Suba o compose: 'docker-compose up -d'
