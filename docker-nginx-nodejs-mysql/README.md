@@ -3,9 +3,11 @@ Nesse desafio você colocará em prática o que aprendemos em relação a utiliz
 
 O retorno da aplicação node.js para o nginx deverá ser:
 
+```
 <h1>Full Cycle Rocks!</h1>
-
+&&
 - Lista de nomes cadastrada no banco de dados.
+```
 
 Gere o docker-compose de uma forma que basta apenas rodarmos: docker-compose up -d que tudo deverá estar funcionando e disponível na porta: 8080.
 
@@ -14,7 +16,17 @@ Suba tudo em um repositório e faça a entrega.
 * A linguagem de programação para este desafio é Node/JavaScript.
 
 # Solução
-1 - Faça clone do projeto
-2 - Criei um volume para sincronizar dados do container app com a máquina local:
-    - acesse a pasta node e rode o comando 'npm install'
-3 - Suba o compose: 'docker-compose up -d'
+1 - Faça clone do projeto   
+2 - Existe um volume para sincronizar dados do container app com a máquina local:    
+- acesse a pasta node e rode o comando 'npm install'    
+
+3 - Suba o compose: 'docker-compose up -d'  
+4 - Chame localhost:8080    
+
+- Se desejar vizualizar logs: 
+
+```
+docker logs --follow app 
+docker logs --follow db 
+docker logs --follow proxy 
+```
