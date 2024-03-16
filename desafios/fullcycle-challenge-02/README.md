@@ -1,23 +1,14 @@
-# fullcycle-docker-course-nginx-nodejs-challenge
-Implementation of a challenge using Docker, nginx, and Node.js, referring to the completion of the Docker course, done on the Full Cycle platform.
+Nesse desafio você colocará em prática o que aprendemos em relação a utilização do nginx como proxy reverso. A idéia principal é que quando um usuário acesse o nginx, o mesmo fará uma chamada em nossa aplicação node.js. Essa aplicação por sua vez adicionará um registro em nosso banco de dados mysql, cadastrando um nome na tabela people.
 
-## Challenge description
+O retorno da aplicação node.js para o nginx deverá ser:
 
-In this challenge, you'll put into practice what you've learned about using nginx as a reverse proxy. The main idea is that when a user accesses nginx, nginx will make a call to our node.js application. This application, in turn, will add a record to our mysql database, registering a name in the people table.
-
-The return from the node.js application to nginx should be:
-
-```
 <h1>Full Cycle Rocks!</h1>
 
-- List of names registered in the database.
-```
-Generate docker-compose in a way that we just run: docker-compose up -d that everything should be working and available on port: 8080.
+- Lista de nomes cadastrada no banco de dados.
 
-Upload everything to a GitHub repository.
+Gere o docker-compose de uma forma que basta apenas rodarmos: docker-compose up -d que tudo deverá estar funcionando e disponível na porta: 8080.
 
-- The programming language for this challenge is Node/JavaScript.
+Suba tudo em um repositório e faça a entrega.
 
-## Challenge answer
+* A linguagem de programação para este desafio é Node/JavaScript.
 
-The source code, docker files, and docker-compose file contained in this repository.
