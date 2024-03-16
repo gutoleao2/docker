@@ -1,0 +1,31 @@
+version: '3'
+
+services:
+
+  laravel:
+    build:
+      # pasta onde o docker file está
+      context: ../../laravel
+      # arquivo docker que quero subir
+      dockerfile: Dockerfile.prod
+    image: williamsasantos/laravel:prod
+    container_name: laravel
+    networks:
+      - laranet
+  
+  nginx:
+    build: 
+      # pasta onde o docker file está
+      context: ../../nginx
+      # arquivo docker que quero subir
+      dockerfile: Dockerfile.prod
+    image: williamsasantos/nginx:prod
+    container_name: nginx
+    networks:
+      - laranet
+    ports:
+      - "8080:80"
+
+networks:
+  laranet:
+    driver: bridge
