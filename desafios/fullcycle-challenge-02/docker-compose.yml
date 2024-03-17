@@ -24,9 +24,9 @@ services:
     entrypoint: dockerize -wait tcp://db:3306 -timeout 20s docker-entrypoint.sh
     command: "node index.js"
     volumes:
-      - ./node:/usr/src/app
+      - ./node:/usr/src/app:rw
       - /usr/src/app/node_modules
-
+      
     networks:
       - challenge-net
     tty: true

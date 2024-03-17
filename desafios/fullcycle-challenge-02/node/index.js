@@ -1,15 +1,19 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const { Repository } = require('./repository/genericRepository');
 const { CadastrarPessoaUseCase } = require('./usecase/CadastrarPessoaUseCase');
 const { ConsultarPessoaUseCase } = require('./usecase/ConsultarPessoaUseCase');
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = 3000;
 
 app.use(bodyParser.json());
 
-Repository.createTableIfNotExists();
+const db = require("./models");
+
+(async () => {
+    await db.sequelize.sync();
+    console.log('Database synced!');
+})();
 
 app.get('/', async (req, res) => {
     try {
@@ -18,9 +22,9 @@ app.get('/', async (req, res) => {
 
         const title = '<h1>Full Cycle Rocks!</h1>';
         const list = `<ul>${peopleList.map(p => `<li>${p.name}</li>`).join('')}</ul>`;
+        
         console.log(`Consulta finalizada com sucesso`);
         res.status(200).send(title.concat(list));
-
     } catch (error) {
         console.error('Falha de processamento:', error);
         res.status(500).json({ error: 'Falha de processamento' });

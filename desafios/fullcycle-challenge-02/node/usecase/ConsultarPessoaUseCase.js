@@ -3,8 +3,7 @@ const { PessoaGateway } = require('../gateway/PessoaGateway');
 async function execute() {
   try {
     console.log('Consultando pessoas');
-    const results = await PessoaGateway.buscarTodos();
-    return results;
+    return await PessoaGateway.buscarTodos();
   } catch (error) {
     console.log(JSON.stringify({ error }));
     throw new Error(error.message);
